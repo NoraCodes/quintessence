@@ -1,7 +1,7 @@
 # quintessence
 outmoded cosmology in the service of composition
 
-a norns script by noracodes; llllllll.co/t/xxxxxx
+a norns script by noracodes; https://llllllll.co/t/44967 
 
 v0.0.1 (early alpha/proof of concept)
 
