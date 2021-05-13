@@ -1,11 +1,11 @@
 # quintessence
 outmoded cosmology in the service of composition
 
-a norns script by noracodes; [llllllll.co/t/xxxxxx]
+a norns script by noracodes; llllllll.co/t/xxxxxx
 
 v0.0.1 (early alpha/proof of concept)
 
-![a photo of Norns running quintessence](hero.jpeg)
+![a photo of Norns running quintessence](hero-small.jpg)
 
 ## requirements
 
@@ -29,7 +29,7 @@ melodic information is derived from the relative positions of these bodies.
 
 ## install
 
-[https://github.com/noracodes/quintessence]
+https://github.com/noracodes/quintessence
 
 from maiden:
 
