@@ -5,7 +5,6 @@
 -- llllllll.co/t/44967
 --
 -- --------------------------------
---
 -- E1 - page
 -- E2 - select param
 -- E3 - param value
@@ -31,6 +30,10 @@
 -- positions of these bodies.
 --
 -- --------------------------------
+--
+-- loads Passthrough if you have it
+-- and don't already load it
+-- prior to script startup
 --
 -- thanks to @fardles for an
 -- elegant callback-based way
