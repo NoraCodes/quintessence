@@ -99,6 +99,7 @@ function init()
   params:set_action("output_use_engine", function(val) if val == 1 then state.send_sound = true else state.send_sound = false end end)
 
   state.pstate = PhysState:new()
+  params:default()
   params:bang()
 
   -- register callbacks
