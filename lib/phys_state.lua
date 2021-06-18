@@ -82,3 +82,5 @@ function maxradius(smaller,larger)
 		then params:set(smaller_id, params:get(larger_id)-1)
 	end
 end
+
+return PhysState

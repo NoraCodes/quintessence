@@ -39,9 +39,9 @@
 
 engine.name = 'PolyPerc'
 
-include("lib/phys_state")
-include("lib/util")
-include("lib/12tet")
+local PhysState = include("lib/phys_state")
+local util = include("lib/util")
+local tuning = include("lib/12tet")
 
 -- Global state
 local state = {
@@ -61,6 +61,8 @@ local state = {
 }
 
 function init()
+  util.load_passthrough()
+
   obt_min = 3
   obt_max = 32
 
@@ -151,7 +153,7 @@ function init()
             state.midicon:note_on(note, 100, params:get("output_channel"))
           end
           if state.send_sound then
-            engine.hz(midi_note_to_freq(note))
+            engine.hz(tuning.midi_note_to_freq(note))
           end
         end 
       end
@@ -306,7 +308,7 @@ function redraw()
         screen.level(2)
       end
       screen.move(80, 15 + 6*i)
-      screen.text(param_name(state.page2.params[i]))
+      screen.text(util.param_name(state.page2.params[i]))
       screen.move(118, 15 + 6*i)
       screen.text(params:get(param_id))
     end
