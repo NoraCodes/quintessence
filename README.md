@@ -3,14 +3,14 @@ outmoded cosmology in the service of composition
 
 a norns script by noracodes; https://llllllll.co/t/44967 
 
-v0.0.3 (early alpha/proof of concept)
+v0.1.0 (usable but potentially buggy beta)
 
 ![a photo of Norns running quintessence](hero-small.jpg)
 
 ## requirements
 
 - Norns
-- a MIDI output
+- a MIDI output (optional)
 
 ## description
 
@@ -39,6 +39,7 @@ from maiden:
 
 ## version history
 
+- v0.1.0: modulation matrix for distances, and polyperc options
 - v0.0.3: load param defaults and load passthrough if not already loaded.
 - v0.0.2: output via PolyPerc. MIDI transport and clock. better organization.
 - v0.0.1: initial PoC. MIDI only.

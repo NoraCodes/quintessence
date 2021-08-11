@@ -1,7 +1,7 @@
 -- quintessence
 -- outmoded cosmology in the
 -- service of composition
--- v0.0.1 (alpha) @noracodes
+-- v0.1.0 (beta) @noracodes
 -- llllllll.co/t/44967
 --
 -- --------------------------------
@@ -25,15 +25,25 @@
 -- one half a rotation
 -- in each and every beat.
 --
--- melodic information is
--- derived from the relative
--- positions of these bodies.
+-- melodies and modulation
+-- are derived from the
+-- relative positions of
+-- these bodies.
+--
+-- --------------------------------
+--
+-- set engine parameters are 
+-- used as offsets for modulation
+-- when mod mappings are enabled
+-- in parameters
 --
 -- --------------------------------
 --
 -- loads Passthrough if you have it
 -- and don't already load it
 -- prior to script startup
+--
+-- --------------------------------
 --
 -- thanks to @fardles for an
 -- elegant callback-based way
@@ -49,19 +59,41 @@ local tuning = include("lib/12tet")
 -- Global state
 local state = {
   run = true,       -- Is the physics model progressing at the moment?
-  pages = { "MODEL", "PARAM", "TRIGS", "SAMPL", "QUANT", "COMMS" },
+  pages = { "MODEL", "PARAM", "MODS"},
   page = 1,         -- Start on the solar system model page
   pstate = {},      -- The physics state of the system
   midicon = {},     -- The MIDI connection in use
   send_sound = true, -- Whether or not to send sound through the PolyPerc engine
   send_midi = true, -- Whether or not to send MIDI
+  notes = {}, -- Notes currently being played
+  mods = {0, 0, 0}, -- Modulations currently being applied
   page1 = {},       -- The page 1 state
   page2 = {         -- The page 2 state
     -- possible params to be edited on page 2
     params = { "radius_a",  "radius_b", "radius_c", "phase_a", "phase_b", "phase_c" },
     param_index = 1 -- Which parameter is being edited
+  },
+  page3 = {
+    -- possible params to display
+    params = { "mod_ab_destination", "mod_bc_destination", "mod_ca_destination" }
   }
 }
+
+function dummy(value)
+  -- nothing
+end
+
+MOD_DESTINATIONS = { "OFF", "CUTOFF", "PULSEWIDTH", "PAN" }
+MOD_DEST_OFFSET =  { 0,      0,        0,            -0.5  }
+MOD_DEST_SCALING = { 0,      5000,     0.8,          1.0  }
+MOD_DEST_FUNCTNS = { dummy, engine.cutoff, engine.pw, engine.pan }
+
+function get_mod_value(distance, mod_slot)
+  local amnts = { params:get("mod_ab_amount"), params:get("mod_bc_amount"), params:get("mod_ca_amount") }
+  local offsets = { 0, params:get("cutoff"), params:get("pw"), params:get("pan") }
+  local metric = state.pstate.distances[distance] / state.pstate.max_distances[distance]
+  return ((metric + MOD_DEST_OFFSET[mod_slot]) * amnts[distance]) * MOD_DEST_SCALING[mod_slot] + offsets[mod_slot]
+end
 
 function init()
   util.load_passthrough()
@@ -102,7 +134,61 @@ function init()
   params:set_action("output_device", function(device) state.midicon = midi.connect(device) end)
   params:set_action("output_send_midi", function(val) if val == 1 then state.send_midi = true else state.send_midi = false end end)
   params:set_action("output_use_engine", function(val) if val == 1 then state.send_sound = true else state.send_sound = false end end)
+    
+  -- engine parameters for polyperc
+  params:add_separator("engine")
+  cs_AMP = controlspec.new(0,1,'lin',0,0.5,'')
+  params:add{
+    type="control",id="amp",controlspec=cs_AMP,
+    action=function(x) engine.amp(x) end
+  }
 
+  cs_REL = controlspec.new(0.1,3.2,'lin',0,1.2,'s')
+  params:add{
+    type="control",id="release",controlspec=cs_REL,
+    action=function(x) engine.release(x) end
+  }
+
+  cs_GAIN = controlspec.new(0,4,'lin',0,1,'')
+  params:add{
+    type="control",id="gain",controlspec=cs_GAIN,
+    action=function(x) engine.gain(x) end
+  }
+  
+  cs_CUT = controlspec.new(50,5000,'exp',0,800,'hz')
+  params:add{
+    type="control",id="cutoff",controlspec=cs_CUT,
+    action=function(x) engine.cutoff(x) end
+  }
+  
+  cs_PW = controlspec.new(0,1,'lin',0,1,'')
+  params:add{
+    type="control",id="pw",controlspec=cs_PW,
+    action=function(x) engine.pw(x) end
+  }
+  
+  cs_PAN = controlspec.new(-1,1, 'lin',0,0,'')
+  params:add{
+    type="control",id="pan",controlspec=cs_PAN,
+    action=function(x) engine.pan(x) end
+  } 
+
+  -- modulation parameters
+  params:add_separator("modulation")
+  cs_MOD = controlspec.new(-1,1, 'lin',0,0.5,'')
+  params:add_option("mod_ab_destination", "AB mod dest", MOD_DESTINATIONS, 2)
+  params:add{
+    type="control",id="mod_ab_amount",name="AB mod amnt",controlspec=cs_MOD
+  } 
+  params:add_option("mod_bc_destination", "BC mod dest", MOD_DESTINATIONS, 3)
+  params:add{
+    type="control",id="mod_bc_amount",name="BC mod amnt",controlspec=cs_MOD
+  } 
+  params:add_option("mod_ca_destination", "CA mod dest", MOD_DESTINATIONS, 4)
+  params:add{
+    type="control",id="mod_ca_amount",name="CA mod amnt",controlspec=cs_MOD
+  } 
+  
   state.pstate = PhysState:new()
   params:default()
   params:bang()
@@ -126,6 +212,15 @@ function init()
         state.pstate:update_computations(3/16)
       end
       redraw()
+      -- update mod destinations
+      local mods = { params:get("mod_ab_destination"), params:get("mod_bc_destination"), params:get("mod_ca_destination") }
+      for i, m in ipairs(mods) do
+        if m ~= 0 then -- skip OFF mods, just don't do the math
+          local value = get_mod_value(i, m)
+          MOD_DEST_FUNCTNS[m](value)
+          state.mods[i] = value
+        end
+      end
     end
   end)
   midi_clockout = clock.run(function ()
@@ -152,11 +247,20 @@ function init()
           local scaling_semitones = 12 * params:get("output_range")
           local offset_semitones = 12 * params:get("output_offset")
           local note = math.floor((state.pstate.area / state.pstate.max_area) * scaling_semitones + offset_semitones);
+          state.notes[#state.notes] = note
           if state.send_midi then
             state.midicon:note_on(note, 100, params:get("output_channel"))
           end
           if state.send_sound then
             engine.hz(tuning.midi_note_to_freq(note))
+          end
+        else
+          if #state.notes > 0 then
+            if state.send_midi then
+              index = #state.notes
+              state.midicon:note_off(state.notes[index], params:get("output_channel"))
+              table.remove(state.notes, index)
+            end
           end
         end 
       end
@@ -320,6 +424,24 @@ function redraw()
     screen.move(70, 59)
     screen.level(1)
     screen.text("param   value")
+  end
+  
+  if state.page == 3 then
+      screen.move(0, 15)
+      screen.level(15)
+      screen.text("MODULATIONS")
+      
+      local labels = {"AB", "BC", "CA"}
+      local mods = { params:get("mod_ab_destination"), params:get("mod_bc_destination"), params:get("mod_ca_destination") }
+      for i, m in ipairs(mods) do
+        screen.level(2)
+        screen.move(3, 12*i + 9)
+        screen.text(labels[i])
+        screen.move(19, 12*i + 9)
+        screen.text(MOD_DESTINATIONS[mods[i]])
+        screen.move(22, 12*i + 15)
+        screen.text(state.mods[i])
+      end
   end
 
   redraw_header()
